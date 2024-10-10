@@ -1,0 +1,233 @@
+CREATING OBJECTS USING CONSTRUCTOR
+
+Constructor Injection :
+@Component
+interface UserRegistrationComponent1 {
+//    fun getUserRegistrationService() : UserRegistrationService
+//    fun getEmailService() : EmailService    // -> Constructor Injection
+}
+
+fun ConstructonInjection() {
+
+    val component = DaggerUserRegistrationComponent1.builder().build() // this is generated class using dagger & annotation
+
+    val userRegistrationService = component.getUserRegistrationService() // we are using fun that are described in interface
+    val emailService = component.getEmailService()
+    // background it is creating the obj as we passed in manual DI and we directly use it
+
+
+    userRegistrationService.createUser("vishal@gmail.com", "454585254")
+    userRegistrationService.email("Vishal", "Tanya", "Feeling Well")
+
+    here the inject is used to call the constructor of classes
+}
+// but in this scenario we have an issue that if we want to create a no of objects then for
+    // each we must define fun and then access it in class by using this fun so then we use
+    // field injection. It's not that we can't use con.inj but for no. of object to reduce burden
+    // we prefer fie.inj.
+
+
+2. Field Injection :
+
+interface UserRegistrationComponent1 {
+ fun inject(mainActivity: MainActivity) // field injection here we directly pass the consumer class
+}
+
+@Inject // -> this inject showing to inject all fields into this
+    // so we have two inject one showing to create objects and other to inject fields
+    lateinit var userRegistrationService: UserRegistrationService
+
+Initialize Dagger component and perform injection
+     val component = DaggerUserRegistrationComponent1.builder().build()
+     component.inject(this)  // This will inject the dependencies into this activity
+as we call it whichever varables in main annotated with inject gets their instance
+
+here the inject is used to inject the instance
+
+CREATING OBJECTS USING MODULES :
+When the objects cannot be created using the constructor of class. It is used with builder, interface
+
+in our app we have two interface notificationService and UserRepository
+so to create the objects of class that inherits them we use Modules-providers READ them in producer package.
+
+to create a module we annotate it Module and create an interface where we define providers annotated with Provides
+and define the fun. if the class returned by function is already created by dagger then we just return it by accepting
+the class as an argument from dagger at runtime and return it.
+Two ways to code it :
+
+1.   @Provides
+    fun getSqlRepository(sqlRepo : SQLRepository) : UserRepository{
+        return sqlRepo
+    } -> no need to make it abstract
+
+2.   @Binds
+   abstract fun getSQLRepository(sqlRepo: SQLRepository) : UserRepository
+
+    // both above are sql repo have are same just code optimisation
+    // Binds is used when we don't need to create the object of class we just return the already created
+    // object that is passed as an arguments, here this sqlRepo is created by Dagger because we annotate
+    // it with Inject means its object is created already and now just pass it no need to create a new object
+    // that's why it is abstract fun that binds the obj with class
+
+//    here, Dagger already knows how to create SQLRepository (because of @Inject in the constructor
+//    of SQLRepository), so it will pass the SQLRepository object and bind it to UserRepository.
+//    No need to create the object manually. Dagger handles it automatically.
+
+
+QUALIFIER - SEE QUALIFIER NOTES
+
+To create the objects where class expect some runtime arguments like in room database, we pass the context
+of Application Class etc. in such cond we have two ways :
+
+1. Passing arguments in Modules :
+Here the argument is passed in module and from module to the class for object creation as in Notificaton
+ServiceModule we pass the arguments of retryCount and from their to message Service.
+Now such modules that accepts arguments needs to be initialized manually while building Components.
+
+interface NotificationServiceModule(retryCount){
+@Named("message")
+    @Provides
+    fun getMessageService() : NotificationService{
+        return MessageService(retryCount)
+    }
+ }
+
+val component = DaggerUserRegistrationComponent1.builder()
+            .notificationServiceModule(NotificationServiceModule(3))
+            .build()
+        component.inject(this)
+
+2. Using Component Factory/ passing arguments to component :
+Here the arguments are passed to components,since components directly can't accept arguments, therefore we
+use component Factory and create a fun in it. This fun pass that argument to component.
+Now the argument is in component so whenever we need the argument we take it from the Dagger in module and
+pass it to class. So for creating component also we need to use component factory and their in its fun we pass
+the argument.
+
+@Component(modules = [UserRepositoryModule::class, NotificationServiceModule::class]) // read below
+interface UserRegistrationComponent1 {
+    @Component.Factory
+    interface Factory {
+        fun create(@BindsInstance retryCount: Int): UserRegistrationComponent1
+    } -> here @BindsInstance binds the parameter with the component as we bind the object with the module
+
+    fun inject(mainActivity : MainActivity)
+
+  }
+
+
+
+IMPLEMENTING SINGLETON PATTERN/SCOPES :
+ for creating a singleton pattern we need that objects are created once so whichever class we need to make
+ singleton we just annotate it with singleton as well as its component
+
+ Basically singleton is just an annotation that defines the scope of an object, its scope is vaild till
+ the lifecycle of the particular place where component is instantiated remains like application, activity, fragment.
+
+ like till now we have created the component in mainActivity therefore the component is scoped with mainactivity,
+ therefore as the activity recreated the component also recreated and its result new objects for each different
+ component which is valid. means each object is bound to component and component is scoped to main activity
+ for each activity we have unique/single component and for each unique component we have single objects but if
+ activity is recreated then new component will be created and then new object will be created.
+
+ To achieve true singleton that scoped until app life cycle so we create the component object in application class simple
+ until app is active application class is active and its component is unique so on.
+
+ Singleton anntotion is just an scoped thing so we create our own sigleton also by using
+ scoped annotation.
+
+ CustomScope :
+ @Scope
+ @MustBeDocumented
+ @Retention(AnnotationRetention.RUNTIME)
+ annotation class ActivityScope()
+
+  lateinit var userRegistrationComponent: UserRegistrationComponent1
+
+     override fun onCreate() {
+         super.onCreate()
+         userRegistrationComponent = DaggerUserRegistrationComponent1.factory().create(3)
+     }
+
+
+
+CREATING DEPENDENCY OF ONE TO OTHER
+In our app we have analytics service and notification/userRepo modules but now I want to have
+the analytic service scoped with the app and notification/userRepo to the activity but if we see the analytics
+object are used in the UserRepo now the depedency is created that the userRepo is dependent on analytic
+and their scope is also different, it's needed to tell Dagger to handle all such scenario.
+
+
+Relation Between components :
+In above scenario the same happens where one component is scoped with application and another with activity
+in such situation we need to tell the Dagger about the dependency.
+
+1. we create different scopes for application/activity level components. its recommended to use the singleton for
+app level and for other we create custom and annotate.
+
+2. build component in their corresponding class.
+
+3. now define dependencies of component where the fragemnts depends on activity depends on applevel.
+and if any of them have component factory then we need to pass the dependencies in the factory. for our app
+userRegistrationComponents depends on App component. and userRegComp has factory so pass the appcomponent into it.
+since our factory is now responsible to create component then its needed to pass the dependencies as :
+
+@ActivityScope
+@Component(dependencies = [AppComponent::class], modules = [UserRepositoryModule::class, NotificationServiceModule::class]) // read below
+interface UserRegistrationComponent1 {
+//    fun getUserRegistrationService() : UserRegistrationService
+//    fun getEmailService() : EmailService    // -> Constructor Injection
+
+
+
+    @Component.Factory
+    interface Factory {
+        fun create(@BindsInstance retryCount: Int, appComponent: AppComponent): UserRegistrationComponent1
+    }
+
+    fun inject(mainActivity: MainActivity) // field injection here we directly pass the consumer class
+}
+
+
+SUBCOMPONENT :
+it is similar to component but have the access to all its parent component, till now we have created
+app level and activity level component and  we need to explicitly defines the methods userRegistration
+uses if suppose we have no of methods in such case define all so instead we use subcomponent which has
+access to all the parent methods.
+
+1. Subcomponent :
+just change the component annotation to subcomponent it doesn't have any dependencies option..
+
+without factory : create a fun that return subcomponent and in main class just instantiate
+factory : create a fun that return factory and in main call the fun of factory you can see its eg in code
+
+Builder :
+It's similar to factory same purpose but need some extra implementation not preferred over factory
+
+to create a builder follow:
+1. define builder interface
+2. a build fun that returns component it's must
+3. function according to parameter that returns builder, like here in factory we have two params so
+create two builder fun. eg :
+interface factory{
+   fun create(@BindInstance retryCount: Int, appComponent : AppComponent) : userComponent
+}
+
+interface builder{
+  fun build() : userComponent -> must with same name
+
+  fun retryCount(@BindInstance retryCount : Int) : builder
+  fun appComponent(appComponent : AppComponent) : builder
+}
+
+for instantiate a builder :
+val component = instead of factory just use builder and .build() at last.
+
+val component = DaggerUserComponent.builder()
+                    .appComponent(appComp)
+                    .retryCount(3)
+                    .build()
+
+it's implementation is almost same for both component and subcomponent except in subcomponent we don't
+have any dependency so no dependency fun.
+NOTE : Builder pattern allows to create build even without calling its fun that causes runtime error

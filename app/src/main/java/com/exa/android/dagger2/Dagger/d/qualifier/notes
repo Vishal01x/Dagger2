@@ -1,0 +1,105 @@
+@Qualifier: This tells Dagger is a qualifier, used to distinguish
+between different implementations of the same type during dependency injection.
+
+Let say i Need all classes object that inherits an interface like email/msg  service that inherits
+notification service in such case we need to use qualifier. They are basically sealed with some name
+and while calling it, we should pass that name. check notification Serivce where i have created a qualifier.
+For creating a qualifier we need to Annotate it with Named("name").
+But due to manual handling of name, it can be have Typo error therefore to overcome such error we create
+our own Qualifier annotation.here we need to pass qualifier itself.
+
+For creating qualifier we need to annotate it with Qualifier, Documented, Retention(RetentionPolicy.Runtime)
+and then just created annotation class
+
+/*
+1. @Qualifier
+Purpose:
+@Qualifier is used in Dependency Injection to distinguish between multiple implementations of the same
+type. This is particularly useful when you have several classes implementing the same interface or multiple
+instances of a class, and you need to tell the DI framework (like Dagger or Hilt) which one to inject in specific cases.
+
+Why is it needed?
+In DI frameworks like Dagger, when you have more than one implementation of a particular type, the
+framework might get confused about which one to inject. @Qualifier helps to resolve this by acting as a distinguishing tag.
+
+Example:
+Imagine you have two types of Database implementations (SQLDatabase and NoSQLDatabase), and you want
+to inject them in different places. You can use @Qualifier to tell Dagger which one to inject.
+
+kotlin
+Copy code
+@Qualifier
+@Retention(AnnotationRetention.RUNTIME)
+annotation class SQLDatabaseQualifier
+
+@Qualifier
+@Retention(AnnotationRetention.RUNTIME)
+annotation class NoSQLDatabaseQualifier
+
+class MyRepository @Inject constructor(
+    @SQLDatabaseQualifier val sqlDatabase: Database,
+    @NoSQLDatabaseQualifier val noSqlDatabase: Database
+)
+Here, the @SQLDatabaseQualifier and @NoSQLDatabaseQualifier annotations are used to specify which
+Database implementation to inject where.
+2. @Documented (Java) / @MustBeDocumented (Kotlin)
+Purpose:
+@Documented in Java and @MustBeDocumented in Kotlin ensure that annotations applied to classes, methods,
+or fields are included in the generated API documentation (e.g., Javadoc in Java or KDoc in Kotlin).
+This means that if a class or method is annotated with an annotation that is marked as @Documented or @MustBeDocumented, that annotation will appear in the generated documentation.
+
+Example:
+kotlin
+Copy code
+@MustBeDocumented
+@Retention(AnnotationRetention.RUNTIME)
+annotation class MyCustomAnnotation
+
+// This annotation will appear in the KDoc of the class, method, or property
+@MyCustomAnnotation
+class MyClass {
+    // Class implementation
+}
+Without @MustBeDocumented, the annotation would be applied in the code, but it would not show up in
+the generated documentation.
+
+3. @Retention
+Purpose:
+@Retention specifies how long annotations should be retained in the program. In Java and Kotlin,
+annotations can be retained at different stages, such as during source code, bytecode, or runtime.
+The most common retention policies are:
+
+SOURCE: The annotation is only available in the source code and discarded by the compiler.
+CLASS: The annotation is included in the compiled .class files but not available at runtime.
+RUNTIME: The annotation is retained in the compiled bytecode and is available at runtime via reflection.
+Example in Kotlin:
+kotlin
+Copy code
+@Retention(AnnotationRetention.RUNTIME)
+annotation class MyRuntimeAnnotation
+@Retention(AnnotationRetention.RUNTIME): This ensures that the annotation is available at runtime,
+meaning that frameworks (like Dagger) can read and use the annotation via reflection.
+
+In Java, the equivalent retention policy would be Retention(RetentionPolicy.RUNTIME).
+
+Common Use Case:
+For annotations used in Dependency Injection (such as @Qualifier), you typically use RUNTIME retention
+because the DI framework needs access to the annotations at runtime.
+
+Example Combining All Three:
+kotlin
+Copy code
+import kotlin.annotation.Retention
+import kotlin.annotation.MustBeDocumented
+import javax.inject.Qualifier
+
+@Qualifier
+@MustBeDocumented
+@Retention(AnnotationRetention.RUNTIME)
+annotation class DatabaseQualifier
+@Qualifier: Marks this annotation as a qualifier for distinguishing between different types during
+dependency injection.
+@MustBeDocumented: Ensures that this annotation will appear in the generated documentation.
+@Retention(AnnotationRetention.RUNTIME): Ensures that this annotation is available at runtime so that the DI framework can use it.
+ */
+

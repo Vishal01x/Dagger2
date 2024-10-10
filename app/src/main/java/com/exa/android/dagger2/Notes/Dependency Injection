@@ -1,0 +1,39 @@
+Dependency Injection - It works at runtime helps in reducing errors. as its interface is created
+Dagger use to create a class whose name is exact same as interface just append Dagger in starting.
+Eg - interface name - UserRegistrationComponent then dagger class will be DaggerUserRegistrationComponent.
+
+To use Dagger we need plugin kotlin- kapt and
+implementation("com.google.dagger:dagger:2.40.5")
+kapt("com.google.dagger:dagger-compiler:2.40.5") where kapt - Kotlin Annotation Processing Tool
+
+For Dagger intialization in Main Activity we call dagger builder as
+ val daggerObject = DaggerInterface.builder().build().interfaceMethod
+ val userRegistrationService = DaggerUserRegistrationService.builder().build().getUserRegistrationService
+
+Types -
+1. Construction Injection - Used to inject by passing parameter in class. Whenever we are calling it
+create its object and then create class object by passing these objects as parameter into it.
+
+2. Field Injection - Using lateinit instantiation in class everything is same but this time declaration
+is lateinit.
+
+Framework: Can be implemented manually but to manage in large project it becomes complex.
+Dagger2 - can be done in three phase:
+
+ -> Consumer - Inject
+ -> Producer - Module, Provides, Blinds
+ -> Connecter - Component
+
+ Working - For implementing we use Dagger that provides us the object.
+ But how? it automatically provides the object for that we need a setup where we provide info of how to
+ create and where to use.
+
+ Workflow - Consumer request object from component
+ now component create some objects making constructor call but don't support interface, builder
+ because the constructor call is not possible.
+ to do so, Modules are producer that helps us for providing object for builder pattern used mainly in
+ Retrofit, Room Database etc.
+
+ We create a Component Interface and apply '@Inject constructor' whenever we need object where constructor
+ means to call constructor, if the constructor itself needs object of other class, apply same annotaion
+ on that class too as in given project.
